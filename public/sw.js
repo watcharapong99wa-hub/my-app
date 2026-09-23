@@ -1,6 +1,6 @@
 /* KepUp service worker: offline shell + installability. */
-const CACHE = "kepup-v1";
-const CORE = ["/", "/manifest.json", "/icon-192.png"];
+const CACHE = "kepup-v2";
+const CORE = ["/manifest.json", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -33,12 +33,14 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(request)
       .then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((cache) => cache.put(request, copy)).catch(() => {});
+        // Never cache HTML pages - only static assets. Stale pages mix content.
+        const type = res.headers.get("content-type") || "";
+        if (res.ok && !type.includes("text/html")) {
+          const copy = res.clone();
+          caches.open(CACHE).then((cache) => cache.put(request, copy)).catch(() => {});
+        }
         return res;
       })
-      .catch(() =>
-        caches.match(request).then((hit) => hit || caches.match("/"))
-      )
+      .catch(() => caches.match(request).then((hit) => hit || Promise.reject("offline")))
   );
 });
