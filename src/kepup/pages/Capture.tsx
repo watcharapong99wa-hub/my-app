@@ -88,6 +88,16 @@ export function Capture() {
     ((mode === "text" && text.trim().length > 0) ||
       (mode === "image" && imageFile !== null));
 
+  // Shared from another app (?auto=1): process automatically, no tap needed.
+  const autoRan = useRef(false);
+  useEffect(() => {
+    if (!autoRan.current && searchParams.get("auto") === "1" && text.trim()) {
+      autoRan.current = true;
+      void run();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div
       className="app"

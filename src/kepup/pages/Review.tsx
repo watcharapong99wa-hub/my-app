@@ -11,6 +11,7 @@ import {
   deadlineTimeText,
 } from "../lib/format";
 import { shelf } from "../lib/store";
+import { downloadIcs } from "../lib/calendar";
 import { FieldBadge, Glass, CategoryPill } from "../components/primitives";
 import { useUI } from "../components/ui";
 import { IconCheck, IconSparkle } from "../components/Icons";
@@ -115,12 +116,30 @@ export function Review() {
     }
     shelf.add(final);
     router.replace("/app");
+    // Automatic reminder: send a calendar file with the save (1-day alarm
+    // inside). The user just taps the downloaded file to add it.
+    let reminderSent = false;
+    if (final.deadlineAt) {
+      try {
+        downloadIcs(final);
+        reminderSent = true;
+      } catch {
+        reminderSent = false;
+      }
+    }
     if (state?.meta?.usedFallback || final.needsReview) {
-      ui.toast("บันทึกแล้ว · อย่าลืมตรวจสอบวันปิดรับและลิงก์กับต้นฉบับ", "info");
+      ui.toast(
+        reminderSent
+          ? "บันทึกแล้ว · ส่งไฟล์เตือนให้แล้ว แตะไฟล์เพื่อใส่ปฏิทิน — อย่าลืมตรวจสอบข้อมูล"
+          : "บันทึกแล้ว · อย่าลืมตรวจสอบวันปิดรับและลิงก์กับต้นฉบับ",
+        "info"
+      );
     } else {
       ui.toast(
-        card.deadlineAt
-          ? `บันทึกแล้ว · ${countdownLabelDeadline(card)}`
+        reminderSent
+          ? `บันทึกแล้ว · ส่งไฟล์เตือนให้แล้ว (${countdownLabelDeadline(final)})`
+          : card.deadlineAt
+          ? `บันทึกแล้ว · ${countdownLabelDeadline(final)}`
           : "บันทึกลงชั้นวางแล้ว"
       );
     }
