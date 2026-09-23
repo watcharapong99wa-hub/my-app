@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { setReviewState } from "../lib/reviewState";
 import { Glass } from "../components/primitives";
 import { IconArrow, IconImage, IconSparkle, IconText } from "../components/Icons";
@@ -12,11 +12,23 @@ type Mode = "text" | "image";
 
 export function Capture() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const vision = useVision();
   const visionOn = vision?.vision === true;
 
   const [mode, setMode] = useState<Mode>("text");
-  const [text, setText] = useState("");
+  // PWA share_target (LINE/IG/TikTok/FB/gallery): prefill shared text once.
+  // Read synchronously during init - no effect, no extra renders.
+  const [text, setText] = useState(() => {
+    const sharedTitle = (searchParams.get("title") || "").trim();
+    const sharedText = (searchParams.get("text") || "").trim();
+    const sharedUrl = (searchParams.get("url") || "").trim();
+    const parts: string[] = [];
+    if (sharedTitle && !sharedText.includes(sharedTitle)) parts.push(sharedTitle);
+    if (sharedText) parts.push(sharedText);
+    if (sharedUrl && !sharedText.includes(sharedUrl)) parts.push(sharedUrl);
+    return parts.join("\n");
+  });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);

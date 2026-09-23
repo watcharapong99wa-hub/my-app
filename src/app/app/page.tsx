@@ -8,11 +8,11 @@ import { RequireAuth } from "@/kepup/components/RequireAuth";
 export default function AppPage() {
   return (
     <UIProvider>
-      <RequireAuth>
-        <Suspense>
+      <Suspense>
+        <RequireAuth>
           <Dashboard />
-        </Suspense>
-      </RequireAuth>
+        </RequireAuth>
+      </Suspense>
     </UIProvider>
   );
 }

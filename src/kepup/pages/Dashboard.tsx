@@ -19,10 +19,11 @@ import { CalendarView } from "../components/CalendarView";
 import { ProfileView } from "../components/ProfileView";
 import { IconSparkle } from "../components/Icons";
 
-const FILTERS = [
+const VIEWS = [
   { value: "all", label: "ทั้งหมด" },
-  { value: "free", label: "ฟรี" },
-  { value: "applying", label: "กำลังสมัคร" },
+  { value: "upcoming", label: "ใกล้ปิดรับ" },
+  { value: "nodate", label: "ไม่มีวัน" },
+  { value: "closed", label: "ปิดแล้ว" },
 ];
 
 export function Dashboard() {
@@ -38,7 +39,9 @@ export function Dashboard() {
   const session = auth.getUser();
   const items = useShelf();
 
-  const [filter, setFilter] = useState<string>("all");
+  const [query, setQuery] = useState("");
+  const [view, setView] = useState<string>("all");
+  const [cat, setCat] = useState<string>("all");
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { competition: 0, camp: 0, scholarship: 0, total: items.length };
@@ -56,15 +59,30 @@ export function Dashboard() {
       .sort((a, b) => a.days - b.days);
   }, [items]);
 
-  const filtered = useMemo(() => {
-    let list = items;
-    if (filter === "free") list = list.filter((o) => o.isFree);
-    else if (filter === "applying")
-      list = list.filter(
-        (o) => o.status === "applying" || o.status === "submitted"
-      );
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const list = items.filter((o) => {
+      if (
+        q &&
+        !(
+          o.title.toLowerCase().includes(q) ||
+          (o.organizer || "").toLowerCase().includes(q)
+        )
+      )
+        return false;
+      if (cat !== "all" && o.category !== cat) return false;
+      const hasDate = Boolean(o.deadlineAt);
+      const d = hasDate ? daysUntilDeadline(o) : 9999;
+      if (view === "upcoming" && !(hasDate && d >= 0)) return false;
+      if (view === "nodate" && hasDate) return false;
+      if (view === "closed" && !(hasDate && d < 0)) return false;
+      return true;
+    });
+    if (view === "upcoming") {
+      return [...list].sort((a, b) => daysUntilDeadline(a) - daysUntilDeadline(b));
+    }
     return list;
-  }, [items, filter]);
+  }, [items, query, view, cat]);
 
   const featured = dueSoon[0]?.o ?? items[0];
 
@@ -205,30 +223,64 @@ export function Dashboard() {
             </div>
           )}
 
-          {/* list with filter */}
+          {/* list with search + views */}
           <div style={{ display: "grid", gap: 12 }}>
             <div className="flex items-center justify-between" style={{ gap: 8 }}>
               <h2 className="h2">ชั้นวางของฉัน</h2>
-              <Segmented value={filter} options={FILTERS} onChange={setFilter} />
+              <Segmented value={view} options={VIEWS} onChange={setView} />
+            </div>
+            <input
+              className="field"
+              value={query}
+              placeholder="ค้นหาชื่อหรือผู้จัด..."
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="ค้นหาในชั้นวาง"
+            />
+            <div className="scroll-x flex" style={{ gap: 6, paddingBottom: 2 }}>
+              <button
+                type="button"
+                className="chip tap"
+                data-active={cat === "all"}
+                onClick={() => setCat("all")}
+              >
+                ทุกหมวด
+              </button>
+              {(Object.keys(CATEGORIES) as (keyof typeof CATEGORIES)[]).map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  className="chip tap"
+                  data-active={cat === k}
+                  onClick={() => setCat(cat === k ? "all" : k)}
+                >
+                  {CATEGORIES[k].label}
+                </button>
+              ))}
             </div>
 
-            {filtered.length === 0 ? (
+            {visible.length === 0 ? (
               <Glass strong style={{ padding: 24, textAlign: "center" }}>
-                <p style={{ fontWeight: 600 }}>ยังไม่มีรายการในหมวดนี้</p>
-                <p className="muted" style={{ marginTop: 4 }}>
-                  ลองแคปโปสเตอร์หรือข้อความที่เจอมาให้ KepUp แยกให้ดู
+                <p style={{ fontWeight: 600 }}>
+                  {items.length === 0 ? "ชั้นวางยังว่างอยู่" : "ไม่เจอรายการที่ตรงกัน"}
                 </p>
-                <button
-                  className="btn-primary"
-                  style={{ marginTop: 14 }}
-                  onClick={() => router.push("/capture")}
-                >
-                  <IconSparkle size={15} /> บันทึกแรกของคุณ
-                </button>
+                <p className="muted" style={{ marginTop: 4 }}>
+                  {items.length === 0
+                    ? "ลองแคปโปสเตอร์หรือข้อความที่เจอมาให้ KepUp แยกให้ดู"
+                    : "ลองเปลี่ยนคำค้นหรือมุมมอง"}
+                </p>
+                {items.length === 0 && (
+                  <button
+                    className="btn-primary"
+                    style={{ marginTop: 14 }}
+                    onClick={() => router.push("/capture")}
+                  >
+                    <IconSparkle size={15} /> บันทึกแรกของคุณ
+                  </button>
+                )}
               </Glass>
             ) : (
               <div style={{ display: "grid", gap: 10 }}>
-                {filtered.map((o) => (
+                {visible.map((o) => (
                   <OpportunityCard key={o.id} o={o} onOpen={open} />
                 ))}
               </div>

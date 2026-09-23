@@ -1,6 +1,8 @@
 "use client";
 
 import { Glass } from "../components/primitives";
+import { OpportunityCard } from "../components/OpportunityCard";
+import type { Opportunity } from "../types";
 import { IconArrow, IconCheck, IconImage, IconText } from "../components/Icons";
 import { TH_MONTHS_SHORT, toBE } from "../lib/format";
 
@@ -40,7 +42,36 @@ function Ring({ days, total = 30 }: { days: number; total?: number }) {
   );
 }
 
-export function Landing({ onStart }: { onStart: () => void }) {
+export function Landing({ onStart, onTry }: { onStart: () => void; onTry: () => void }) {
+
+const EXAMPLE: Opportunity = {
+  id: "example",
+  title: "ค่ายวิทยาศาสตร์เยาวชนภูมิภาค (ตัวอย่าง)",
+  category: "camp",
+  deadlineAt: null,
+  deadlineTime: null,
+  deadlineState: "missing",
+  organizer: "คณะวิทยาศาสตร์ มหาวิทยาลัยตัวอย่าง",
+  isFree: true,
+  feeAmount: null,
+  feeUnit: "unknown",
+  teamMin: null,
+  teamMax: null,
+  summary: "นี่คือหน้าตาการ์ดหลัง AI แยกข้อมูล — ของจริงจะมีวันปิดรับและลิงก์สมัคร",
+  applyUrl: null,
+  applyUrlState: "missing",
+  needsReview: true,
+  confidence: {},
+  status: "saved",
+  locationType: "unknown",
+  venue: null,
+  province: null,
+  requiredDocs: [],
+  gradeLevels: [],
+  originalText: null,
+  originalUrl: null,
+  hasOriginalImage: false,
+};
   const today = new Date();
   const soon = new Date();
   soon.setDate(soon.getDate() + 3);
@@ -209,6 +240,22 @@ export function Landing({ onStart }: { onStart: () => void }) {
         <i data-active="true" />
         <i />
         <i />
+      </div>
+
+      {/* realistic example of what you get */}
+      <div style={{ display: "grid", gap: 8 }}>
+        <span className="label" style={{ textAlign: "center" }}>
+          ตัวอย่างผลลัพธ์ — ลองวางโพสต์จริงได้เลย ไม่ต้องสมัครก่อน
+        </span>
+        <OpportunityCard o={EXAMPLE} onOpen={() => onTry()} />
+        <button
+          type="button"
+          className="btn-ghost"
+          style={{ justifyContent: "center" }}
+          onClick={onTry}
+        >
+          ลองวางโพสต์ก่อนสมัคร <IconArrow />
+        </button>
       </div>
 
       {/* pitch */}

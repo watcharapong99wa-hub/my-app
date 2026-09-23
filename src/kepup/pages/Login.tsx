@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Glass } from "../components/primitives";
 import { IconArrow, IconCheck } from "../components/Icons";
 import { auth } from "../lib/auth";
@@ -11,6 +11,8 @@ const GRADES = ["m1", "m2", "m3", "m4", "m5", "m6", "voc"];
 
 export function Login() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next") || "/app";
   const [name, setName] = useState("");
   const [grade, setGrade] = useState<string | null>(null);
 
@@ -20,7 +22,7 @@ export function Login() {
     e?.preventDefault();
     if (!canSubmit) return;
     auth.signIn(name, grade);
-    router.replace("/app");
+    router.replace(next);
   }
 
   return (
@@ -123,9 +125,11 @@ export function Login() {
 
       <div style={{ textAlign: "center" }}>
         <p className="muted" style={{ lineHeight: 1.7 }}>
-          <IconCheck size={13} /> ข้อมูลทั้งหมดเก็บอยู่ในเครื่องนี้เท่านั้น
+          <IconCheck size={13} /> ชั้นวางของคุณเก็บในเครื่องนี้เท่านั้น
           <br />
-          ไม่มีการส่งออกไปที่ไหน และไม่ต้องใช้รหัสผ่าน
+          ข้อความ/รูปที่ให้ AI อ่านจะถูกส่งไปประมวลผลเพื่อแยกข้อมูล
+          <br />
+          เราไม่เก็บสำเนาไว้ที่เซิร์ฟเวอร์ · ไม่ต้องใช้รหัสผ่าน
         </p>
       </div>
     </div>

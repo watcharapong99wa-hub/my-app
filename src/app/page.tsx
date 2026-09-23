@@ -13,6 +13,7 @@ export default function HomePage() {
         onStart={() => {
           router.push(auth.isAuthenticated() ? "/app" : "/login");
         }}
+        onTry={() => router.push("/capture")}
       />
     </UIProvider>
   );

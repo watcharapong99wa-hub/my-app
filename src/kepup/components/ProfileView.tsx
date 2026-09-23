@@ -116,9 +116,47 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </Glass>
       </div>
 
-      {/* Settings & Reset */}
+      {/* Settings & Backup */}
       <Glass strong style={{ padding: 16, display: 'grid', gap: 10 }}>
-        <span className="label">การจัดการข้อมูล</span>
+        <span className="label">การจัดการข้อมูล · โปรไฟล์ในเครื่องนี้</span>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            type="button"
+            className="btn-ghost"
+            style={{ justifyContent: 'center', flex: 1 }}
+            onClick={() => {
+              shelf.exportBackup();
+              ui.toast('ดาวน์โหลดไฟล์สำรองแล้ว', 'info');
+            }}
+          >
+            สำรองข้อมูล
+          </button>
+          <label
+            className="btn-ghost"
+            style={{ justifyContent: 'center', flex: 1, cursor: 'pointer' }}
+          >
+            นำเข้าข้อมูล
+            <input
+              type="file"
+              accept="application/json"
+              hidden
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                e.target.value = '';
+                if (!f) return;
+                try {
+                  const n = await shelf.importBackup(f);
+                  ui.toast(`นำเข้าข้อมูลแล้ว ${n} รายการ`, 'info');
+                } catch (err) {
+                  ui.toast(
+                    err instanceof Error ? err.message : 'นำเข้าไม่สำเร็จ',
+                    'warn'
+                  );
+                }
+              }}
+            />
+          </label>
+        </div>
         <button
           type="button"
           className="btn-ghost"
@@ -135,6 +173,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         >
           ออกจากระบบ / สลับบัญชี
         </button>
+        <p className="muted" style={{ fontSize: 11.5, lineHeight: 1.7, textAlign: 'center' }}>
+          โปรไฟล์คือชื่อในเครื่องนี้ ไม่ใช่บัญชีผู้ใช้ ·
+          ออกจากระบบแล้วข้อมูลในชั้นวางยังอยู่ ·
+          ล้างข้อมูลเบราว์เซอร์จะลบทุกอย่าง — สำรองไว้ก่อน
+        </p>
       </Glass>
     </div>
   );

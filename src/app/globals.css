@@ -303,6 +303,11 @@ button {
   background: rgba(255, 255, 255, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.5);
 }
+.chip[data-active="true"] {
+  background: linear-gradient(150deg, #FF9A4D, #EE4B8B 55%, #9B5CF0);
+  color: #fff;
+  border-color: transparent;
+}
 
 /* deadline urgency — the one place colour means something, not decoration */
 .urgent-now {

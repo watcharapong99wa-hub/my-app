@@ -1,19 +1,23 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { auth } from "@/kepup/lib/auth";
 
-/** Redirects to /login when no local KepUp session exists (replaces RequireAuth). */
+/** Redirects to /login (preserving ?next=) when no local KepUp session exists. */
 export function RequireAuth({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const allowed = auth.isAuthenticated();
 
   useEffect(() => {
     if (!allowed) {
-      router.replace("/login");
+      const query = searchParams.toString();
+      const here = query ? `${pathname}?${query}` : pathname;
+      router.replace(`/login?next=${encodeURIComponent(here)}`);
     }
-  }, [allowed, router]);
+  }, [allowed, pathname, searchParams, router]);
 
   if (!allowed) return null;
   return <>{children}</>;
