@@ -25,13 +25,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   const handleReset = async () => {
     const ok = await ui.confirm({
-      title: 'คืนค่าข้อมูลตัวอย่าง?',
-      body: 'รายการทั้งหมดจะถูกรีเซ็ตกลับเป็นข้อมูลตัวอย่างตั้งต้น',
-      confirmLabel: 'รีเซ็ตข้อมูล',
+      title: 'ลบข้อมูลทั้งหมด?',
+      body: 'รายการที่บันทึกไว้ทั้งหมดจะถูกลบออกจากเครื่องนี้ และกู้คืนไม่ได้',
+      confirmLabel: 'ลบทั้งหมด',
+      destructive: true,
     });
     if (ok) {
       shelf.reset();
-      ui.toast('คืนค่าข้อมูลตัวอย่างแล้ว', 'info');
+      ui.toast('ลบข้อมูลทั้งหมดแล้ว', 'info');
     }
   };
 
@@ -120,7 +121,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           style={{ justifyContent: 'center', width: '100%' }}
           onClick={handleReset}
         >
-          คืนค่ารายการโอกาสตัวอย่าง
+          ลบข้อมูลทั้งหมด
         </button>
         <button
           type="button"

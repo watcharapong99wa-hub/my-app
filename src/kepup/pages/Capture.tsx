@@ -10,15 +10,6 @@ import { useVision } from "../lib/vision";
 
 type Mode = "text" | "image";
 
-const SAMPLE_TEXT = `รับสมัครค่ายเยาวชนวิทยาศาสตร์และนวัตกรรมรุ่นเยาว์ (Young Sci Camp 2026)
-จัดโดย คณะวิทยาศาสตร์ จุฬาลงกรณ์มหาวิทยาลัย
-สำหรับนักเรียน ม.4 - ม.6 สายวิทย์-คณิต
-เปิดรับสมัครตั้งแต่วันนี้ - 30 มีนาคม 2569 เวลา 23:59 น.
-สถานที่: อาคารมหาวชิรุณหิศ คณะวิทยาศาสตร์ จุฬาฯ
-ค่าใช้จ่าย: ฟรีตลอดโครงการ ไม่มีค่าสมัคร
-สมัครได้ที่: https://scicamp.chula.ac.th
-สิ่งที่ต้องใช้: ใบ ปพ.1 (5 เทอม), ใบยินยอมผู้ปกครอง`;
-
 export function Capture() {
   const router = useRouter();
   const vision = useVision();
@@ -147,14 +138,7 @@ export function Capture() {
               className="flex items-center justify-between"
               style={{ marginTop: 10 }}
             >
-              <button
-                type="button"
-                className="btn-ghost"
-                style={{ fontSize: 12 }}
-                onClick={() => setText(SAMPLE_TEXT)}
-              >
-                ลองใส่ข้อความตัวอย่าง
-              </button>
+              <span />
               {text && (
                 <button
                   type="button"
