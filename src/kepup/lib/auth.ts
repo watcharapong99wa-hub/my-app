@@ -2,6 +2,20 @@ import { useState, useEffect } from 'react';
 import type { AuthSession } from '../types';
 
 const STORAGE_KEY = 'kepup_auth_session';
+const COOKIE_KEY = 'kepup_session';
+
+function writeSessionCookie(name: string | null) {
+  try {
+    if (typeof document === "undefined") return;
+    if (name && name.trim()) {
+      document.cookie = `${COOKIE_KEY}=${encodeURIComponent(name.trim())}; path=/; max-age=31536000; SameSite=Lax`;
+    } else {
+      document.cookie = `${COOKIE_KEY}=; path=/; max-age=0; SameSite=Lax`;
+    }
+  } catch {
+    // cookies unavailable - server redirect just won't trigger
+  }
+}
 
 type AuthListener = () => void;
 
@@ -68,15 +82,23 @@ class AuthStore {
   signIn(name: string, grade: string | null) {
     this.session = { name: name.trim(), grade };
     this.save();
+    writeSessionCookie(name);
   }
 
   signOut() {
     this.session = null;
     this.save();
+    writeSessionCookie(null);
   }
 }
 
 export const auth = new AuthStore();
+
+/** Older logins predate the cookie: re-write it so the server can redirect. */
+export function ensureSessionCookie(): void {
+  const s = auth.getUser();
+  if (s && s.name.trim()) writeSessionCookie(s.name);
+}
 
 export function useSession(): AuthSession | null {
   const [session, setSession] = useState<AuthSession | null>(() => auth.getUser());
