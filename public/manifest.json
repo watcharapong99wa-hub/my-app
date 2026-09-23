@@ -1,0 +1,31 @@
+{
+  "name": "KepUp — AI Opportunity Tracker",
+  "short_name": "KepUp",
+  "description": "Save and organize competitions, camps, scholarships, and open houses with AI.",
+  "start_url": "/?source=pwa",
+  "display": "standalone",
+  "background_color": "#fca88f",
+  "theme_color": "#ec5f92",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
+}
