@@ -129,31 +129,37 @@ export function Dashboard() {
 
       {tab === "shelf" && (
         <>
-          {/* the reference's floating bubbles */}
-          <div style={{ position: "relative", height: 168 }}>
+          {/* floating bubbles - responsive row, never overlaps neighbours */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-end",
+              justifyContent: "space-around",
+              gap: 6,
+              paddingInline: 2,
+            }}
+          >
             <Bubble
-              size={124}
+              size={100}
               gradient={gradientOf("competition")}
               label={CATEGORIES.competition.label}
               value={counts.competition}
               className="float"
-              style={{ position: "absolute", left: 4, top: 26 }}
             />
             <Bubble
-              size={144}
+              size={122}
               gradient={gradientOf("camp")}
               label={CATEGORIES.camp.label}
               value={counts.camp}
               className="float-2"
-              style={{ position: "absolute", left: 112, top: 2 }}
+              style={{ marginBottom: 12 }}
             />
             <Bubble
-              size={118}
+              size={96}
               gradient={gradientOf("scholarship")}
               label={CATEGORIES.scholarship.label}
               value={counts.scholarship}
               className="float-3"
-              style={{ position: "absolute", right: 6, top: 32 }}
             />
           </div>
 

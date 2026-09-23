@@ -73,28 +73,24 @@ export function Landing({ onStart }: { onStart: () => void }) {
         </span>
       </div>
 
-      {/* floating preview stack */}
-      <div
-        style={{
-          position: "relative",
-          height: 296,
-          display: "grid",
-          placeItems: "center",
-        }}
-      >
-        {/* saved-card confirmation */}
-        <Glass
-          strong
-          radius="md"
-          className="float"
+      {/* floating preview stack - responsive flow, never overlaps */}
+      <div style={{ display: "grid", gap: 12 }}>
+        <div
           style={{
-            position: "absolute",
-            top: 6,
-            left: 2,
-            width: 158,
-            padding: "16px 16px 18px",
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 12,
           }}
         >
+          {/* saved-card confirmation */}
+          <Glass
+            strong
+            radius="md"
+            className="float"
+            style={{
+              padding: "16px 16px 18px",
+            }}
+          >
           <div
             style={{
               width: 30,
@@ -139,10 +135,6 @@ export function Landing({ onStart }: { onStart: () => void }) {
           radius="md"
           className="float-2"
           style={{
-            position: "absolute",
-            top: 0,
-            right: 6,
-            width: 128,
             padding: "14px 14px 16px",
             display: "grid",
             justifyItems: "center",
@@ -159,16 +151,13 @@ export function Landing({ onStart }: { onStart: () => void }) {
             ทุนแลกเปลี่ยน AFS
           </div>
         </Glass>
+        </div>
 
         {/* dated opportunity card with the gradient rail */}
         <Glass
           strong
           className="overflow-hidden"
           style={{
-            position: "absolute",
-            bottom: 4,
-            left: 10,
-            right: 22,
             padding: 0,
             display: "flex",
           }}
