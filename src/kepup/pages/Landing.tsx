@@ -104,6 +104,46 @@ const EXAMPLE: Opportunity = {
         </span>
       </div>
 
+      {/* pitch first - the CTA, no scrolling needed */}
+      <Glass strong style={{ padding: "26px 24px 24px", textAlign: "center" }}>
+        <h1 className="display">
+          เก็บทุกโอกาส
+          <br />
+          ก่อนหมดเขต
+        </h1>
+        <p className="lede" style={{ marginTop: 12 }}>
+          วางโพสต์ แคปหน้าจอ หรือข้อความที่เจอ
+          <br />
+          แล้วให้ KepUp แยกวันปิดรับให้อัตโนมัติ
+        </p>
+
+        <div
+          className="flex items-center justify-center gap-2"
+          style={{ marginTop: 16 }}
+        >
+          <span className="chip">
+            <IconText size={14} /> วางข้อความ
+          </span>
+          <span className="chip">
+            <IconImage size={14} /> อัปโหลดรูป
+          </span>
+        </div>
+
+        <button
+          className="btn-primary"
+          style={{ marginTop: 22, width: "100%" }}
+          onClick={onStart}
+        >
+          เริ่มใช้งาน
+          <IconArrow />
+        </button>
+
+        <p className="muted" style={{ marginTop: 13, fontSize: 11.5 }}>
+          ใช้ได้ฟรี · ข้อมูลของคุณเห็นได้เฉพาะคุณ ·{" "}
+          {toBE(today.getFullYear())}
+        </p>
+      </Glass>
+
       {/* floating preview stack - responsive flow, never overlaps */}
       <div style={{ display: "grid", gap: 12 }}>
         <div
@@ -258,45 +298,6 @@ const EXAMPLE: Opportunity = {
         </button>
       </div>
 
-      {/* pitch */}
-      <Glass strong style={{ padding: "26px 24px 24px", textAlign: "center" }}>
-        <h1 className="display">
-          เก็บทุกโอกาส
-          <br />
-          ก่อนหมดเขต
-        </h1>
-        <p className="lede" style={{ marginTop: 12 }}>
-          วางโพสต์ แคปหน้าจอ หรือข้อความที่เจอ
-          <br />
-          แล้วให้ KepUp แยกวันปิดรับให้อัตโนมัติ
-        </p>
-
-        <div
-          className="flex items-center justify-center gap-2"
-          style={{ marginTop: 16 }}
-        >
-          <span className="chip">
-            <IconText size={14} /> วางข้อความ
-          </span>
-          <span className="chip">
-            <IconImage size={14} /> อัปโหลดรูป
-          </span>
-        </div>
-
-        <button
-          className="btn-primary"
-          style={{ marginTop: 22, width: "100%" }}
-          onClick={onStart}
-        >
-          เริ่มใช้งาน
-          <IconArrow />
-        </button>
-
-        <p className="muted" style={{ marginTop: 13, fontSize: 11.5 }}>
-          ใช้ได้ฟรี · ข้อมูลของคุณเห็นได้เฉพาะคุณ ·{" "}
-          {toBE(today.getFullYear())}
-        </p>
-      </Glass>
     </div>
   );
 }
