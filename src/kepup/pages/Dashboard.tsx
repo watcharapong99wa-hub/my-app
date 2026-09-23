@@ -10,7 +10,7 @@ import {
   daysUntil,
   toBE,
 } from "../lib/format";
-import { auth, greeting, initialOf } from "../lib/auth";
+import { greeting, initialOf, signOutEverywhere, useAppSession } from "../lib/auth";
 import { useShelf } from "../lib/store";
 import { BottomNav, type Tab } from "../components/BottomNav";
 import { FeaturedCard, OpportunityCard } from "../components/OpportunityCard";
@@ -35,7 +35,7 @@ export function Dashboard() {
       ? rawTab
       : "shelf";
 
-  const session = auth.getUser();
+  const { session } = useAppSession();
   const items = useShelf();
 
   const [filter, setFilter] = useState<string>("all");
@@ -264,8 +264,9 @@ export function Dashboard() {
           session={session ?? { name: "นักเรียน", grade: null }}
           items={items}
           onSignOut={() => {
-            auth.signOut();
-            router.replace("/login");
+            void signOutEverywhere().finally(() => {
+              router.replace("/login");
+            });
           }}
         />
       )}

@@ -2,19 +2,19 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { auth } from "@/kepup/lib/auth";
+import { useAppSession } from "@/kepup/lib/auth";
 
-/** Redirects to /login when no local KepUp session exists (replaces RequireAuth). */
+/** Redirects to /login when there is no Google or nickname session. */
 export function RequireAuth({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const allowed = auth.isAuthenticated();
+  const { session, loading } = useAppSession();
 
   useEffect(() => {
-    if (!allowed) {
+    if (!loading && !session) {
       router.replace("/login");
     }
-  }, [allowed, router]);
+  }, [loading, session, router]);
 
-  if (!allowed) return null;
+  if (loading || !session) return null;
   return <>{children}</>;
 }

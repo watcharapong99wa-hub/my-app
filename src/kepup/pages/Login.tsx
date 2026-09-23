@@ -1,25 +1,48 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Glass } from "../components/primitives";
 import { IconArrow, IconCheck } from "../components/Icons";
-import { auth } from "../lib/auth";
+import { nicknameStore, signInWithGoogle } from "../lib/auth";
 import { GRADE_LABELS } from "../lib/format";
 
 const GRADES = ["m1", "m2", "m3", "m4", "m5", "m6", "voc"];
 
 export function Login() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const oauthFailed = searchParams.get("error") === "oauth";
+
   const [name, setName] = useState("");
   const [grade, setGrade] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(
+    oauthFailed ? "Google Login ไม่สำเร็จ — ตรวจว่าเปิด Provider ใน Supabase แล้ว" : null
+  );
 
   const canSubmit = name.trim().length > 0;
 
-  function submit(e?: React.FormEvent) {
+  async function google() {
+    setBusy(true);
+    setErr(null);
+    try {
+      const message = await signInWithGoogle();
+      if (message) {
+        setErr(message);
+        setBusy(false);
+      }
+      // success redirects to Google - stay busy
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "เข้าสู่ระบบไม่สำเร็จ");
+      setBusy(false);
+    }
+  }
+
+  function submitNickname(e?: React.FormEvent) {
     e?.preventDefault();
     if (!canSubmit) return;
-    auth.signIn(name, grade);
+    nicknameStore.signIn(name, grade);
     router.replace("/app");
   }
 
@@ -61,7 +84,51 @@ export function Login() {
       </div>
 
       <Glass strong style={{ padding: 20 }}>
-        <form onSubmit={submit}>
+        <button
+          type="button"
+          className="btn-primary"
+          style={{ width: "100%", opacity: busy ? 0.7 : 1 }}
+          disabled={busy}
+          onClick={google}
+        >
+          <span
+            aria-hidden="true"
+            style={{
+              width: 18,
+              height: 18,
+              borderRadius: 999,
+              background: "#fff",
+              color: "#DB4437",
+              fontWeight: 800,
+              fontSize: 13,
+              display: "inline-grid",
+              placeItems: "center",
+              flex: "none",
+            }}
+          >
+            G
+          </span>
+          {busy ? "กำลังเปิด Google..." : "เข้าด้วย Google"}
+          <IconArrow />
+        </button>
+
+        {err && (
+          <p style={{ marginTop: 12, fontSize: 13, color: "#A6322A", lineHeight: 1.6 }}>
+            {err}
+          </p>
+        )}
+
+        <div
+          className="flex items-center gap-2"
+          style={{ margin: "20px 0 4px", color: "var(--ink-3)", fontSize: 12 }}
+          aria-hidden="true"
+        >
+          <span style={{ flex: 1, height: 1, background: "rgba(92,72,130,.18)" }} />
+          หรือใช้ชื่อเล่น
+          <span style={{ flex: 1, height: 1, background: "rgba(92,72,130,.18)" }} />
+        </div>
+
+        <form onSubmit={submitNickname}>
           <label className="label" htmlFor="login-name">
             เรียกคุณว่าอะไรดี
           </label>
@@ -69,10 +136,6 @@ export function Login() {
             id="login-name"
             className="field"
             value={name}
-            autoFocus
-            // not "given-name": browser autofill silently overwrites a typed
-            // nickname with a saved profile name, which is jarring on a shared
-            // or demo machine
             autoComplete="off"
             placeholder="ชื่อเล่นก็ได้"
             maxLength={40}
@@ -123,9 +186,9 @@ export function Login() {
 
       <div style={{ textAlign: "center" }}>
         <p className="muted" style={{ lineHeight: 1.7 }}>
-          <IconCheck size={13} /> ข้อมูลทั้งหมดเก็บอยู่ในเครื่องนี้เท่านั้น
+          <IconCheck size={13} /> ชื่อเล่นเก็บอยู่ในเครื่องนี้เท่านั้น
           <br />
-          ไม่มีการส่งออกไปที่ไหน และไม่ต้องใช้รหัสผ่าน
+          Google Login ซิงก์บัญชีของคุณ ไม่ต้องใช้รหัสผ่าน
         </p>
       </div>
     </div>
