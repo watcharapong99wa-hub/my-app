@@ -1,6 +1,22 @@
 import React from 'react';
-import type { Category } from '../types';
+import type { Category, FieldState } from '../types';
 import { CATEGORIES } from '../lib/categories';
+
+/** Honesty badge: was this field found in the source, guessed, or missing? */
+export function FieldBadge({ state }: { state: FieldState }) {
+  const style: React.CSSProperties =
+    state === 'found'
+      ? { background: 'rgba(46, 125, 50, .12)', color: '#2E7D32' }
+      : state === 'inferred'
+      ? { background: 'rgba(224, 161, 75, .18)', color: '#9A6B1A' }
+      : { background: 'rgba(92,72,130,.1)', color: 'var(--ink-3)' };
+  const label = state === 'found' ? 'พบในต้นฉบับ' : state === 'inferred' ? 'ต้องตรวจสอบ' : 'ไม่ระบุ';
+  return (
+    <span className="chip" style={{ fontSize: 11, ...style }}>
+      {label}
+    </span>
+  );
+}
 
 export interface GlassProps extends React.HTMLAttributes<HTMLDivElement> {
   strong?: boolean;

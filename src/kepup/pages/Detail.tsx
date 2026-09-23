@@ -4,18 +4,19 @@ import { useParams, useRouter } from "next/navigation";
 import { setReviewState } from "../lib/reviewState";
 import { CATEGORIES, gradientOf } from "../lib/categories";
 import {
-  countdownLabel,
+  countdownLabelDeadline,
   feeLabel,
   gradeLabel,
   teamLabel,
-  thaiLong,
   thaiRange,
-  urgencyOf,
+  urgencyOfDeadline,
+  deadlineDateText,
+  deadlineTimeText,
   LOCATION_LABELS,
 } from "../lib/format";
 import { downloadIcs, googleCalendarUrl } from "../lib/calendar";
 import { shelf, useShelf } from "../lib/store";
-import { Glass } from "../components/primitives";
+import { FieldBadge, Glass } from "../components/primitives";
 import { useUI } from "../components/ui";
 import { IconArrow, IconCalendar, IconCheck } from "../components/Icons";
 import type { Status } from "../types";
@@ -58,7 +59,7 @@ export function Detail() {
   }
 
   const gcal = googleCalendarUrl(o);
-  const urgent = urgencyOf(o.deadlineAt);
+  const urgent = urgencyOfDeadline(o);
 
   return (
     <div className="app" style={{ paddingBlock: "20px 36px", minHeight: "100dvh", gap: 14 }}>
@@ -98,6 +99,19 @@ export function Detail() {
       </div>
 
       <Glass strong style={{ padding: 0, overflow: "hidden" }}>
+        {o.needsReview && (
+          <div
+            style={{
+              padding: "10px 20px",
+              background: "rgba(224,161,75,.16)",
+              fontSize: 13,
+              fontWeight: 600,
+              color: "#9A6B1A",
+            }}
+          >
+            ข้อมูลบางส่วนต้องตรวจสอบ — เทียบกับต้นฉบับก่อนสมัคร
+          </div>
+        )}
         <div style={{ background: gradientOf(o.category), padding: "15px 20px", color: "#fff" }}>
           <div className="flex items-center justify-between gap-3">
             <span style={{ fontSize: 12.5, fontWeight: 600, opacity: 0.95 }}>
@@ -108,7 +122,7 @@ export function Detail() {
                 className="pill"
                 style={{ background: "rgba(255,255,255,.26)", color: "#fff" }}
               >
-                {countdownLabel(o.deadlineAt)}
+                {countdownLabelDeadline(o)}
               </span>
             )}
           </div>
@@ -132,13 +146,30 @@ export function Detail() {
             value={
               o.deadlineAt ? (
                 <>
-                  {thaiLong(o.deadlineAt)}
+                  {deadlineDateText(o)} · {deadlineTimeText(o)}{" "}
+                  <FieldBadge state={o.deadlineState} />
                   {o.deadlineIsEstimated && (
                     <span className="muted"> · คาดการณ์ ควรเช็กอีกครั้ง</span>
                   )}
                 </>
               ) : (
-                <span className="muted">ยังไม่พบวันปิดรับ</span>
+                <span className="muted">ยังไม่พบวันปิดรับ — เช็กจากต้นฉบับก่อนสมัคร</span>
+              )
+            }
+          />
+
+          <Row
+            label="ลิงก์สมัคร"
+            value={
+              o.applyUrl ? (
+                <>
+                  <a href={o.applyUrl} target="_blank" rel="noopener noreferrer">
+                    เปิดลิงก์
+                  </a>{" "}
+                  <FieldBadge state={o.applyUrlState} />
+                </>
+              ) : (
+                <span className="muted">ยังไม่มีลิงก์ — หาจากต้นฉบับก่อนสมัคร</span>
               )
             }
           />
@@ -177,6 +208,52 @@ export function Detail() {
         </div>
       </Glass>
 
+      {/* evidence - original source kept with the card */}
+      {(o.originalUrl || o.originalText || o.hasOriginalImage) && (
+        <Glass strong style={{ padding: 16 }}>
+          <span className="label">ต้นฉบับที่มา</span>
+          <div style={{ display: "grid", gap: 8, marginTop: 9 }}>
+            {o.originalUrl && (
+              <a
+                className="btn-ghost"
+                style={{ justifyContent: "center" }}
+                href={o.originalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                ดูต้นฉบับ <IconArrow size={14} />
+              </a>
+            )}
+            {o.hasOriginalImage && (
+              <p className="muted" style={{ fontSize: 12.5 }}>
+                บันทึกจากภาพสกรีนช็อตที่อัปโหลด (ไม่ได้เก็บไฟล์รูปไว้)
+              </p>
+            )}
+            {o.originalText && (
+              <details>
+                <summary
+                  className="muted"
+                  style={{ fontSize: 12.5, cursor: "pointer" }}
+                >
+                  ดูข้อความต้นฉบับที่วางไว้
+                </summary>
+                <p
+                  style={{
+                    marginTop: 8,
+                    fontSize: 13,
+                    lineHeight: 1.7,
+                    whiteSpace: "pre-wrap",
+                    color: "var(--ink-2)",
+                  }}
+                >
+                  {o.originalText}
+                </p>
+              </details>
+            )}
+          </div>
+        </Glass>
+      )}
+
       {/* status */}
       <Glass strong style={{ padding: 16 }}>
         <span className="label">สถานะการสมัคร</span>
@@ -205,7 +282,7 @@ export function Detail() {
             <IconCalendar size={13} /> เตือนก่อนหมดเขต
           </span>
           <p className="muted" style={{ marginTop: 5 }}>
-            เพิ่มเข้าปฏิทินพร้อมเตือนล่วงหน้า 1 วัน
+            ไฟล์ .ics มีเตือนล่วงหน้า 1 วัน · ปุ่ม Google ต้องตั้งเตือนเองในปฏิทิน
           </p>
           <div style={{ display: "flex", gap: 8, marginTop: 11, flexWrap: "wrap" }}>
             {gcal && (
@@ -224,7 +301,7 @@ export function Detail() {
               style={{ flex: "1 1 110px", justifyContent: "center", padding: "13px 18px" }}
               onClick={() => {
                 downloadIcs(o);
-                ui.toast("ดาวน์โหลดไฟล์ปฏิทินแล้ว");
+                ui.toast("ดาวน์โหลดไฟล์ปฏิทินแล้ว (เตือนล่วงหน้า 1 วัน)");
               }}
             >
               ดาวน์โหลด .ics

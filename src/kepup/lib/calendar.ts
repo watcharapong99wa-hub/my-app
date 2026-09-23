@@ -1,11 +1,16 @@
 import type { Opportunity } from '../types';
+import { deadlineEnd } from './format';
 
+/**
+ * Calendar events always use the exact deadline instant (date + stated time).
+ * Date-only deadlines count until end of day Bangkok - never silent 07:00.
+ * Google Calendar links cannot carry a reminder; the .ics file includes one.
+ */
 export function googleCalendarUrl(o: Opportunity): string | null {
-  if (!o.deadlineAt) return null;
-  const deadline = new Date(o.deadlineAt);
-  if (isNaN(deadline.getTime())) return null;
+  const deadline = deadlineEnd(o);
+  if (!deadline) return null;
 
-  // Set start time 1 hour before deadline or entire deadline day
+  // 1-hour event ending at the deadline
   const start = new Date(deadline.getTime() - 60 * 60 * 1000);
   const end = deadline;
 
@@ -24,9 +29,8 @@ export function googleCalendarUrl(o: Opportunity): string | null {
 }
 
 export function downloadIcs(o: Opportunity): void {
-  if (!o.deadlineAt) return;
-  const deadline = new Date(o.deadlineAt);
-  if (isNaN(deadline.getTime())) return;
+  const deadline = deadlineEnd(o);
+  if (!deadline) return;
 
   const start = new Date(deadline.getTime() - 60 * 60 * 1000);
   const end = deadline;
@@ -35,6 +39,9 @@ export function downloadIcs(o: Opportunity): void {
     d.toISOString().replace(/-|:|\.\d+/g, '');
 
   const cleanText = (str: string) => str.replace(/\n/g, '\\n').replace(/,/g, '\\,');
+  const safeLocation = o.locationType === 'online' || o.locationType === 'unknown'
+    ? o.locationType === 'online' ? 'Online' : ''
+    : [o.venue, o.province].filter(Boolean).join(', ') || '';
 
   const icsContent = [
     'BEGIN:VCALENDAR',
@@ -48,7 +55,7 @@ export function downloadIcs(o: Opportunity): void {
     `DTEND:${fmt(end)}`,
     `SUMMARY:${cleanText(`[ปิดรับสมัคร] ${o.title}`)}`,
     `DESCRIPTION:${cleanText(`${o.summary || ''} | ผู้จัด: ${o.organizer || '-'} | ลิงก์: ${o.applyUrl || '-'}`)}`,
-    `LOCATION:${cleanText(o.locationType === 'online' ? 'Online' : [o.venue, o.province].filter(Boolean).join(', ') || '')}`,
+    `LOCATION:${cleanText(safeLocation)}`,
     'BEGIN:VALARM',
     'ACTION:DISPLAY',
     'DESCRIPTION:เตือนปิดรับสมัครล่วงหน้า 1 วัน',

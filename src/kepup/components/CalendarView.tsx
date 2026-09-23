@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import type { Opportunity } from '../types';
-import { TH_MONTHS_FULL, TH_WEEKDAYS_SHORT, toBE, countdownLabel, urgencyOf } from '../lib/format';
+import { TH_MONTHS_FULL, TH_WEEKDAYS_SHORT, toBE, countdownLabelDeadline, urgencyOfDeadline } from '../lib/format';
 import { CATEGORIES } from '../lib/categories';
 import { Glass, CategoryPill } from './primitives';
 
@@ -186,7 +186,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ items, onOpen }) => 
             </Glass>
           ) : (
             pickedItems.map((o) => {
-              const urgent = urgencyOf(o.deadlineAt);
+              const urgent = urgencyOfDeadline(o);
               return (
                 <Glass
                   key={o.id}
@@ -207,7 +207,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ items, onOpen }) => 
                         }`}
                         style={{ fontSize: 10.5 }}
                       >
-                        {countdownLabel(o.deadlineAt)}
+                        {countdownLabelDeadline(o)}
                       </span>
                     )}
                   </div>

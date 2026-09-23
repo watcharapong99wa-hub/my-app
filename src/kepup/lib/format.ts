@@ -44,11 +44,71 @@ export const LOCATION_LABELS: Record<string, string> = {
   online: 'ออนไลน์',
   onsite: 'ออนไซต์',
   hybrid: 'ไฮบริด (ออนไลน์ + ออนไซต์)',
+  unknown: 'ไม่ระบุ',
 };
 
 /** Converts Gregorian year to Buddhist Era (พ.ศ.) */
 export function toBE(year: number): number {
   return year + 543;
+}
+
+export interface DeadlineInput {
+  deadlineAt: string | null;
+  deadlineTime?: string | null;
+}
+
+/**
+ * The exact instant a deadline passes. Date-only deadlines (deadlineTime null)
+ * count until the END of that day in Bangkok - we never silently pick 00:00.
+ */
+export function deadlineEnd(o: DeadlineInput): Date | null {
+  if (!o || !o.deadlineAt) return null;
+  const d = new Date(o.deadlineAt);
+  if (isNaN(d.getTime())) return null;
+  if (o.deadlineTime) return d; // exact instant stored with +07:00
+  return new Date(d.getTime() + (24 * 60 * 60 * 1000 - 1));
+}
+
+export function daysUntilDeadline(o: DeadlineInput): number {
+  const end = deadlineEnd(o);
+  if (!end) return 999;
+  const diffMs = end.getTime() - Date.now();
+  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+}
+
+export function urgencyOfDeadline(o: DeadlineInput): 'now' | 'soon' | 'calm' | 'passed' {
+  if (!o || !o.deadlineAt) return 'calm';
+  const days = daysUntilDeadline(o);
+  if (days < 0) return 'passed';
+  if (days <= 3) return 'now';
+  if (days <= 7) return 'soon';
+  return 'calm';
+}
+
+export function countdownLabelDeadline(o: DeadlineInput): string {
+  if (!o || !o.deadlineAt) return 'ไม่มีวันปิดรับ';
+  const days = daysUntilDeadline(o);
+  if (days < 0) return 'ปิดรับแล้ว';
+  if (days === 0) return 'ปิดรับวันนี้!';
+  if (days === 1) return 'เหลือ 1 วัน';
+  return `เหลือ ${days} วัน`;
+}
+
+/** "30 กันยายน 2569" from the stored date part (Bangkok). Never invents a time. */
+export function deadlineDateText(o: DeadlineInput): string {
+  if (!o || !o.deadlineAt) return '';
+  const m = o.deadlineAt.slice(0, 10).match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return '';
+  const day = parseInt(m[3], 10);
+  const month = TH_MONTHS_FULL[parseInt(m[2], 10) - 1];
+  if (!month) return '';
+  return `${day} ${month} ${toBE(parseInt(m[1], 10))}`;
+}
+
+/** "23:59 น." or "ไม่ระบุเวลา" - never a silent default. */
+export function deadlineTimeText(o: DeadlineInput): string {
+  if (!o || !o.deadlineAt) return '';
+  return o.deadlineTime ? `${o.deadlineTime} น.` : 'ไม่ระบุเวลา';
 }
 
 export function daysUntil(iso: string | null): number {
@@ -123,11 +183,11 @@ export function feeLabel(
         : '';
     return `${amount.toLocaleString()} บาท${unitText}`;
   }
-  return 'ฟรี หรือไม่ระบุค่าใช้จ่าย';
+  return 'ไม่ระบุค่าใช้จ่าย';
 }
 
 export function teamLabel(min?: number | null, max?: number | null): string {
-  if (!min && !max) return 'เดี่ยว หรือทีม';
+  if (!min && !max) return 'ไม่ระบุ';
   if (min === 1 && (!max || max === 1)) return 'เดี่ยว';
   if (min && max && min === max) return `ทีม ${min} คน`;
   if (min && max) return `ทีม ${min} - ${max} คน`;
@@ -137,6 +197,6 @@ export function teamLabel(min?: number | null, max?: number | null): string {
 }
 
 export function gradeLabel(grades?: string[]): string {
-  if (!grades || grades.length === 0) return 'ทุกระดับชั้น';
+  if (!grades || grades.length === 0) return 'ไม่ระบุ';
   return grades.map((g) => GRADE_LABELS[g] || g).join(', ');
 }

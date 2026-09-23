@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Opportunity } from '../types';
 import { CATEGORIES, gradientOf } from '../lib/categories';
-import { countdownLabel, urgencyOf, thaiLong, feeLabel } from '../lib/format';
+import { countdownLabelDeadline, urgencyOfDeadline, deadlineDateText, deadlineTimeText, feeLabel } from '../lib/format';
 import { Glass, CategoryPill } from './primitives';
 
 export function FeaturedCard({
@@ -11,7 +11,7 @@ export function FeaturedCard({
   o: Opportunity;
   onOpen: (o: Opportunity) => void;
 }) {
-  const urgent = urgencyOf(o.deadlineAt);
+  const urgent = urgencyOfDeadline(o);
 
   return (
     <Glass
@@ -45,7 +45,7 @@ export function FeaturedCard({
                   : 'urgent-calm'
               }`}
             >
-              {countdownLabel(o.deadlineAt)}
+              {countdownLabelDeadline(o)}
             </span>
           )}
         </div>
@@ -93,7 +93,7 @@ export function FeaturedCard({
 
         <div className="flex items-center justify-between" style={{ marginTop: 4 }}>
           <span className="muted" style={{ fontSize: 12 }}>
-            {o.deadlineAt ? thaiLong(o.deadlineAt) : 'ไม่ระบุวันปิดรับ'}
+            {o.deadlineAt ? `${deadlineDateText(o)} · ${deadlineTimeText(o)}` : 'ไม่ระบุวันปิดรับ'}
           </span>
           <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink)' }}>
             {feeLabel(o.isFree, o.feeAmount, o.feeUnit)}
@@ -111,7 +111,7 @@ export function OpportunityCard({
   o: Opportunity;
   onOpen: (o: Opportunity) => void;
 }) {
-  const urgent = urgencyOf(o.deadlineAt);
+  const urgent = urgencyOfDeadline(o);
 
   return (
     <Glass
@@ -137,7 +137,7 @@ export function OpportunityCard({
             }`}
             style={{ fontSize: 11 }}
           >
-            {countdownLabel(o.deadlineAt)}
+            {countdownLabelDeadline(o)}
           </span>
         )}
       </div>
@@ -162,7 +162,7 @@ export function OpportunityCard({
 
       <div className="flex items-center justify-between" style={{ marginTop: 2 }}>
         <span className="muted" style={{ fontSize: 11.5 }}>
-          {o.deadlineAt ? thaiLong(o.deadlineAt) : 'ยังไม่มีวันปิดรับ'}
+          {o.deadlineAt ? `${deadlineDateText(o)} · ${deadlineTimeText(o)}` : 'ยังไม่มีวันปิดรับ'}
         </span>
         <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--ink-2)' }}>
           {o.isFree ? 'ฟรี' : o.feeAmount ? `${o.feeAmount} บ.` : 'ไม่ระบุ'}

@@ -22,7 +22,12 @@ class ShelfStore {
       }
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        this.items = JSON.parse(raw);
+        const parsed = JSON.parse(raw);
+        this.items = Array.isArray(parsed)
+          ? parsed.map(ShelfStore.normalize)
+          : [];
+        // persist normalized shape (drops nothing, only fills new fields)
+        this.save();
         return;
       }
     } catch (e) {
@@ -58,6 +63,23 @@ class ShelfStore {
     return this.items;
   }
 
+  /** Fill fields added after an item was saved (older app versions). */
+  private static normalize(raw: Opportunity): Opportunity {
+    const o = { ...(raw as Partial<Opportunity>) } as Opportunity;
+    if (o.deadlineTime === undefined) o.deadlineTime = null;
+    if (!o.deadlineState) o.deadlineState = o.deadlineAt ? "inferred" : "missing";
+    if (!o.applyUrlState) o.applyUrlState = o.applyUrl ? "inferred" : "missing";
+    if (o.needsReview === undefined) {
+      o.needsReview = o.deadlineState !== "found" || o.applyUrlState !== "found";
+    }
+    if (!o.locationType) o.locationType = "unknown";
+    if (o.originalText === undefined) o.originalText = null;
+    if (o.originalUrl === undefined) o.originalUrl = null;
+    if (o.hasOriginalImage === undefined) o.hasOriginalImage = false;
+    if (!Array.isArray(o.requiredDocs)) o.requiredDocs = [];
+    return o;
+  }
+
   get(id: string): Opportunity | undefined {
     return this.items.find((item) => item.id === id);
   }
@@ -91,6 +113,38 @@ class ShelfStore {
   reset() {
     this.items = INITIAL_OPPORTUNITIES;
     this.save();
+  }
+
+  /** Download a backup JSON of the whole shelf (device-local data). */
+  exportBackup(): void {
+    if (typeof window === "undefined") return;
+    const payload = JSON.stringify(
+      { app: "kepup", version: 1, exportedAt: new Date().toISOString(), items: this.items },
+      null,
+      2
+    );
+    const blob = new Blob([payload], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `kepup-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  /** Restore shelf from a backup file. Returns item count or throws. */
+  async importBackup(file: File): Promise<number> {
+    const text = await file.text();
+    const parsed = JSON.parse(text) as { items?: unknown };
+    if (!parsed || !Array.isArray(parsed.items)) {
+      throw new Error("ไฟล์สำรองไม่ถูกต้อง (ต้องเป็นไฟล์ kepup-backup .json)");
+    }
+    const items = (parsed.items as Opportunity[]).map(ShelfStore.normalize);
+    this.items = items;
+    this.save();
+    return items.length;
   }
 }
 

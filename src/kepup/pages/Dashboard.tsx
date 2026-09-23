@@ -7,7 +7,7 @@ import { CATEGORIES, gradientOf } from "../lib/categories";
 import {
   TH_MONTHS_FULL,
   TH_WEEKDAYS_SHORT,
-  daysUntil,
+  daysUntilDeadline,
   toBE,
 } from "../lib/format";
 import { auth, greeting, initialOf } from "../lib/auth";
@@ -51,7 +51,7 @@ export function Dashboard() {
   const dueSoon = useMemo(() => {
     return items
       .filter((o) => o.deadlineAt)
-      .map((o) => ({ o, days: daysUntil(o.deadlineAt) }))
+      .map((o) => ({ o, days: daysUntilDeadline(o) }))
       .filter(({ days }) => days >= 0)
       .sort((a, b) => a.days - b.days);
   }, [items]);

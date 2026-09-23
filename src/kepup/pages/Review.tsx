@@ -5,24 +5,24 @@ import { useRouter } from "next/navigation";
 import { takeReviewState } from "../lib/reviewState";
 import type { Category, Opportunity } from "../types";
 import { CATEGORIES } from "../lib/categories";
-import { countdownLabel, thaiLong } from "../lib/format";
+import {
+  countdownLabelDeadline,
+  deadlineDateText,
+  deadlineTimeText,
+} from "../lib/format";
 import { shelf } from "../lib/store";
-import { Glass, CategoryPill } from "../components/primitives";
+import { FieldBadge, Glass, CategoryPill } from "../components/primitives";
 import { useUI } from "../components/ui";
 import { IconCheck, IconSparkle } from "../components/Icons";
 
 const LOW = 0.8;
 
-/** A datetime-local input wants "YYYY-MM-DDTHH:mm" in local wall time. */
-function toInput(iso: string | null): string {
+/** Split date/time inputs: a missing time stays missing, never defaulted. */
+function datePart(iso: string | null): string {
   if (!iso) return "";
-  const d = new Date(iso);
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(
-    d.getHours()
-  )}:${p(d.getMinutes())}`;
+  const m = iso.slice(0, 10).match(/(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[1]}-${m[2]}-${m[3]}` : "";
 }
-const fromInput = (v: string) => (v ? new Date(v).toISOString() : null);
 
 function Field({
   label,
@@ -62,6 +62,7 @@ export function Review() {
   const state = initialState;
 
   const [draft, setDraft] = useState<Opportunity | null>(state?.draft ?? null);
+  const [confirmed, setConfirmed] = useState(false);
 
   const editing = Boolean(state?.editing);
 
@@ -95,24 +96,40 @@ export function Review() {
   const lowCategory = (c.category ?? 1) < LOW;
   const lowFee = (c.fee ?? 1) < LOW;
   const flagged = [lowTitle, lowDeadline, lowCategory, lowFee].filter(Boolean).length;
+  const uncertain = flagged > 0 || draft.needsReview;
 
   function save() {
     const title = card.title.trim();
     if (!title) return;
+    const final = {
+      ...card,
+      title,
+      needsReview:
+        card.deadlineState !== "found" || card.applyUrlState !== "found",
+    };
     if (editing) {
-      shelf.update(card.id, { ...card, title });
+      shelf.update(card.id, final);
       router.replace(`/card/${card.id}`);
       ui.toast("บันทึกการแก้ไขแล้ว");
       return;
     }
-    shelf.add({ ...card, title });
+    shelf.add(final);
     router.replace("/app");
-    ui.toast(
-      card.deadlineAt
-        ? `บันทึกแล้ว · ${countdownLabel(card.deadlineAt)}`
-        : "บันทึกลงชั้นวางแล้ว"
-    );
+    if (state?.meta?.usedFallback || final.needsReview) {
+      ui.toast("บันทึกแล้ว · อย่าลืมตรวจสอบวันปิดรับและลิงก์กับต้นฉบับ", "info");
+    } else {
+      ui.toast(
+        card.deadlineAt
+          ? `บันทึกแล้ว · ${countdownLabelDeadline(card)}`
+          : "บันทึกลงชั้นวางแล้ว"
+      );
+    }
   }
+
+  const mustConfirm =
+    !editing &&
+    (card.deadlineState !== "found" || card.applyUrlState !== "found");
+  const canSave = draft.title.trim() && (!mustConfirm || confirmed);
 
   return (
     <div className="app" style={{ paddingBlock: "20px 32px", minHeight: "100dvh", gap: 14 }}>
@@ -128,14 +145,14 @@ export function Review() {
       {!editing && !state?.manual && state?.meta?.usedFallback && (
         <Glass strong style={{ padding: "13px 16px", borderLeft: "3px solid #E0A14B" }}>
           <p style={{ fontSize: 14, fontWeight: 600 }}>
-            <IconSparkle size={14} /> อ่านแบบออฟไลน์ให้แล้ว
+            <IconSparkle size={14} /> AI ใช้ไม่ได้ — อ่านจากข้อความเท่านั้น
           </p>
           <p className="muted" style={{ marginTop: 3 }}>
-            ตอนนี้ AI ใช้ไม่ได้ ระบบจึงอ่านวันที่และตัวเลขจากข้อความเอง
+            ระบบจะไม่เดาวันปิดรับ ลิงก์ หรือเอกสาร
             {state.meta.found?.length
               ? ` พบ ${state.meta.found.length} ข้อมูล`
-              : ""}{" "}
-            — ช่วยตรวจดูให้ครบก่อนบันทึก
+              : " ไม่พบข้อมูลสำคัญ"}{" "}
+            — เทียบกับต้นฉบับด้านล่างก่อนบันทึก
           </p>
         </Glass>
       )}
@@ -145,24 +162,28 @@ export function Review() {
           strong
           style={{
             padding: "13px 16px",
-            borderLeft: `3px solid ${flagged ? "#E0A14B" : "#2FC3A6"}`,
+            borderLeft: `3px solid ${uncertain ? "#E0A14B" : "#2FC3A6"}`,
           }}
         >
           <p style={{ fontSize: 14, fontWeight: 600 }}>
-            {flagged === 0 ? (
+            {uncertain ? (
               <>
-                <IconCheck size={14} /> AI อ่านครบทุกข้อมูล
+                <IconSparkle size={14} />{" "}
+                {flagged > 0
+                  ? `AI ไม่แน่ใจ ${flagged} ข้อมูล`
+                  : "ข้อมูลบางส่วนต้องตรวจสอบ"}
+                {draft.needsReview ? " · วันปิดรับ/ลิงก์ต้องตรวจสอบ" : ""}
               </>
             ) : (
               <>
-                <IconSparkle size={14} /> AI ไม่แน่ใจ {flagged} ข้อมูล
+                <IconCheck size={14} /> AI อ่านครบทุกข้อมูล
               </>
             )}
           </p>
           <p className="muted" style={{ marginTop: 3 }}>
-            {flagged === 0
-              ? "ดูอีกรอบแล้วกดบันทึกได้เลย"
-              : "ช่องที่มีสีเหลืองคือช่องที่ควรเช็กก่อนบันทึก"}
+            {uncertain
+              ? "ช่องที่มีสีเหลืองคือช่องที่ควรเช็กก่อนบันทึก"
+              : "ดูอีกรอบแล้วกดบันทึกได้เลย"}
             {state?.meta?.deadlineDisputed && " · วันปิดรับจาก AI ไม่ตรงกับที่เราคำนวณ"}
           </p>
         </Glass>
@@ -174,6 +195,45 @@ export function Review() {
           <p className="muted" style={{ marginTop: 3 }}>
             ชื่อและวันปิดรับตรงกับที่มีอยู่ในชั้นวาง
           </p>
+        </Glass>
+      )}
+
+      {(draft.originalUrl || draft.originalText || draft.hasOriginalImage) && (
+        <Glass strong style={{ padding: "13px 16px" }}>
+          <span className="label">ต้นฉบับที่มา — เทียบก่อนบันทึก</span>
+          <div style={{ display: "grid", gap: 8, marginTop: 9 }}>
+            {draft.originalUrl && (
+              <a
+                className="btn-ghost"
+                style={{ justifyContent: "center" }}
+                href={draft.originalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                เปิดต้นฉบับ
+              </a>
+            )}
+            {draft.hasOriginalImage && (
+              <p className="muted" style={{ fontSize: 12.5 }}>
+                ดึงจากภาพสกรีนช็อตที่อัปโหลด
+              </p>
+            )}
+            {draft.originalText && (
+              <p
+                style={{
+                  fontSize: 13,
+                  lineHeight: 1.7,
+                  whiteSpace: "pre-wrap",
+                  color: "var(--ink-2)",
+                  background: "rgba(255,255,255,.5)",
+                  borderRadius: 10,
+                  padding: "10px 12px",
+                }}
+              >
+                {draft.originalText}
+              </p>
+            )}
+          </div>
         </Glass>
       )}
 
@@ -205,25 +265,73 @@ export function Review() {
 
         <Field
           label="วันปิดรับสมัคร"
-          low={lowDeadline}
+          low={lowDeadline || draft.deadlineState !== "found"}
           hint={
             draft.deadlineAt
-              ? `${thaiLong(draft.deadlineAt)} · ${countdownLabel(draft.deadlineAt)}${
+              ? `${deadlineDateText(draft)} · ${deadlineTimeText(draft)} · ${countdownLabelDeadline(draft)}${
                   draft.deadlineIsEstimated ? " · เป็นวันที่คาดการณ์" : ""
                 }`
-              : "ยังไม่มีวันปิดรับ — ใส่เองได้"
+              : "ยังไม่มีวันปิดรับ — ใส่เองได้ หรือเว้นไว้"
           }
         >
-          <input
-            id="rf-deadline"
-            className="field"
-            type="datetime-local"
-            value={toInput(draft.deadlineAt)}
-            onChange={(e) => {
-              set("deadlineAt", fromInput(e.target.value));
-              setDraft((d) => (d ? { ...d, deadlineIsEstimated: false } : d));
-            }}
-          />
+          <div className="flex items-center" style={{ gap: 8, flexWrap: "wrap" }}>
+            <FieldBadge state={draft.deadlineState} />
+          </div>
+          <div className="flex items-center" style={{ gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+            <input
+              id="rf-deadline"
+              className="field"
+              type="date"
+              style={{ flex: "1 1 150px" }}
+              value={datePart(draft.deadlineAt)}
+              onChange={(e) => {
+                const d = e.target.value;
+                if (!d) {
+                  set("deadlineAt", null);
+                  setDraft((x) =>
+                    x ? { ...x, deadlineTime: null, deadlineState: "missing", deadlineIsEstimated: false } : x
+                  );
+                  return;
+                }
+                const t = draft.deadlineTime ?? "00:00";
+                set("deadlineAt", `${d}T${t}:00+07:00`);
+                setDraft((x) =>
+                  x ? { ...x, deadlineState: "found", deadlineIsEstimated: false } : x
+                );
+              }}
+            />
+            <input
+              id="rf-deadline-time"
+              className="field"
+              type="time"
+              style={{ width: 120 }}
+              value={draft.deadlineTime ?? ""}
+              onChange={(e) => {
+                const t = e.target.value || null;
+                const d = datePart(draft.deadlineAt);
+                if (!d) return;
+                set("deadlineAt", `${d}T${t ?? "00:00"}:00+07:00`);
+                setDraft((x) =>
+                  x ? { ...x, deadlineTime: t, deadlineState: "found", deadlineIsEstimated: false } : x
+                );
+              }}
+            />
+            {draft.deadlineTime && (
+              <button
+                type="button"
+                className="btn-ghost"
+                style={{ fontSize: 12 }}
+                onClick={() => {
+                  const d = datePart(draft.deadlineAt);
+                  if (!d) return;
+                  set("deadlineAt", `${d}T00:00:00+07:00`);
+                  setDraft((x) => (x ? { ...x, deadlineTime: null } : x));
+                }}
+              >
+                ไม่ระบุเวลา
+              </button>
+            )}
+          </div>
         </Field>
 
         <Field label="ผู้จัด">
@@ -320,21 +428,50 @@ export function Review() {
         </Field>
 
         <Field label="ลิงก์สมัคร">
+          <div className="flex items-center" style={{ gap: 8, marginBottom: 8 }}>
+            <FieldBadge state={draft.applyUrlState} />
+          </div>
           <input
             id="rf-url"
             className="field"
             type="url"
             value={draft.applyUrl ?? ""}
-            placeholder="https://"
-            onChange={(e) => set("applyUrl", e.target.value || null)}
+            placeholder="https:// — เว้นว่างได้ถ้ายังไม่มี"
+            onChange={(e) => {
+              const v = e.target.value || null;
+              set("applyUrl", v);
+              setDraft((x) =>
+                x ? { ...x, applyUrlState: v ? "found" : "missing" } : x
+              );
+            }}
           />
         </Field>
       </Glass>
 
+      {mustConfirm && (
+        <Glass strong style={{ padding: "13px 16px", borderLeft: "3px solid #E0A14B" }}>
+          <label
+            className="flex items-center"
+            style={{ gap: 10, fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+          >
+            <input
+              type="checkbox"
+              checked={confirmed}
+              onChange={(e) => setConfirmed(e.target.checked)}
+              style={{ width: 18, height: 18, accentColor: "#9A6B1A" }}
+            />
+            ฉันตรวจสอบวันปิดรับและลิงก์สมัครกับต้นฉบับแล้ว
+          </label>
+          <p className="muted" style={{ marginTop: 6 }}>
+            ระบบไม่บันทึกข้อมูลที่ยังไม่ได้ตรวจสอบโดยไม่ได้รับความยินยอม
+          </p>
+        </Glass>
+      )}
+
       <button
         className="btn-primary"
-        style={{ width: "100%", opacity: draft.title.trim() ? 1 : 0.55 }}
-        disabled={!draft.title.trim()}
+        style={{ width: "100%", opacity: canSave ? 1 : 0.55 }}
+        disabled={!canSave}
         onClick={save}
       >
         <IconCheck size={16} />
@@ -343,6 +480,11 @@ export function Review() {
       {!draft.title.trim() && (
         <p className="muted" style={{ textAlign: "center" }}>
           ต้องมีชื่อกิจกรรมก่อนถึงจะบันทึกได้
+        </p>
+      )}
+      {draft.title.trim() !== "" && mustConfirm && !confirmed && (
+        <p className="muted" style={{ textAlign: "center" }}>
+          ติ๊กยืนยันด้านบนก่อนบันทึก
         </p>
       )}
     </div>

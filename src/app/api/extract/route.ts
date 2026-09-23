@@ -1,4 +1,15 @@
 import { GoogleGenAI } from "@google/genai";
+import {
+  parseDateTime,
+  findFirstUrl,
+  detectCategory,
+  detectFee,
+  detectDocs,
+  detectTeam,
+  detectLocation,
+  detectGrades,
+  detectTitle,
+} from "@/kepup/lib/sourceParse";
 
 // Ported from kepup/server.ts: analyze text/image and extract opportunity details.
 // Request: { text?: string, images?: [{ mimeType: string, data: string }] }
@@ -86,50 +97,41 @@ function generateFallbackTimetable(deadlineStr?: string, category = "competition
   ];
 }
 
+/**
+ * Honest heuristic fallback. NEVER invents deadlines, links, fees, or docs.
+ * Anything not stated in the text stays empty with low confidence.
+ */
 function fallbackRuleExtractor(text = "", url = "") {
-  const lower = (text + " " + url).toLowerCase();
-
-  let category = "competition";
-  if (lower.includes("ค่าย") || lower.includes("camp")) category = "camp";
-  else if (lower.includes("ทุน") || lower.includes("scholarship")) category = "scholarship";
-  else if (lower.includes("workshop") || lower.includes("เวิร์กช็อป") || lower.includes("อบรม"))
-    category = "workshop";
-  else if (lower.includes("hackathon") || lower.includes("แฮกกาธอน")) category = "hackathon";
-  else if (lower.includes("open house") || lower.includes("เปิดบ้าน")) category = "open_house";
-
-  const now = new Date();
-  const defaultDeadline = new Date(now.getTime() + 14 * 86400000).toISOString().split("T")[0];
-  const defaultEvent = new Date(now.getTime() + 28 * 86400000).toISOString().split("T")[0];
-
-  const titleMatch =
-    text.split("\n").filter((l) => l.trim().length > 3)[0] ||
-    "กิจกรรมใหม่สำหรับนักเรียน ม.ปลาย";
-  const cleanTitle = titleMatch.replace(/^[#*\-•\s]+/, "").slice(0, 80);
-  const online = lower.includes("online") || lower.includes("ซูม") || lower.includes("zoom");
+  const dt = parseDateTime(text);
+  const link = findFirstUrl(text) || url || null;
+  const fee = detectFee(text);
+  const team = detectTeam(text);
 
   return {
-    titleTh: cleanTitle,
-    titleEn: cleanTitle,
-    category,
-    organizerTh: "คณะ/องค์กรผู้จัดกิจกรรม",
-    organizerEn: "Event Organizer",
-    deadlineDate: defaultDeadline,
-    deadlineTime: "23:59",
-    eventStartDate: defaultEvent,
-    eventEndDate: defaultEvent,
-    locationType: online ? "online" : "onsite",
-    fee: lower.includes("ฟรี") || lower.includes("free")
-      ? "ฟรี (ไม่มีค่าใช้จ่าย)"
-      : "ฟรี หรือตามเงื่อนไขผู้จัด",
-    requiredDocs: [
-      "ใบ ปพ.1 (ระเบียนแสดงผลการเรียน)",
-      "สำเนาบัตรประจำตัวนักเรียน",
-      "หนังสือยินยอมจากผู้ปกครอง",
-    ],
-    applicationUrl: url || "https://www.camphub.in.th",
-    preparationTimetable: generateFallbackTimetable(defaultDeadline, category),
-    confidenceScore: 0.85,
-    lowConfidenceFields: ["deadlineDate", "fee"],
+    titleTh: detectTitle(text) || "กิจกรรมใหม่ (รอตรวจสอบชื่อ)",
+    titleEn: detectTitle(text) || "New activity (title needs review)",
+    category: detectCategory(text),
+    organizerTh: null,
+    organizerEn: null,
+    deadlineDate: dt ? dt.date : null,
+    deadlineTime: dt && dt.time ? dt.time : null,
+    deadlineState: dt ? "found" : "missing",
+    eventStartDate: null,
+    eventEndDate: null,
+    locationType: detectLocation(text),
+    locationDetailTh: null,
+    fee: fee.isFree === true ? "ฟรี (ไม่มีค่าใช้จ่าย)" : fee.amount ? `${fee.amount} บาท` : null,
+    requiredDocs: detectDocs(text),
+    teamMin: team.min,
+    teamMax: team.max,
+    gradeLevels: detectGrades(text),
+    applicationUrl: link,
+    applyUrlState: link ? "found" : "missing",
+    preparationTimetable: dt
+      ? generateFallbackTimetable(dt.date, detectCategory(text))
+      : [],
+    confidenceScore: dt ? 0.7 : 0.3,
+    lowConfidenceFields: dt ? ["fee"] : ["deadlineDate", "deadlineTime", "fee", "applicationUrl"],
   };
 }
 
@@ -137,15 +139,15 @@ const PROMPT = (text: string, url: string) => `
 You are an expert Thai educational opportunity organizer AI for Thai high school students (นักเรียนระดับชั้น ม.4 - ม.6 ทั่วประเทศ).
 Analyze the provided Thai/English text, social media caption, URL, or image poster of an educational opportunity (competition, camp, scholarship, workshop, hackathon, or university open house).
 
-Extract the following structured details accurately. If a field is not explicitly mentioned, provide a reasonable estimate suitable for Thai students and list it in "lowConfidenceFields".
+Extract the following structured details accurately. If a field is not explicitly mentioned, return null for it and list it in "lowConfidenceFields". NEVER invent a deadline, application link, fee, organizer, or required document.
 
 1. "titleTh": Official Thai name of the opportunity or activity.
 2. "titleEn": English translation or official English name.
 3. "category": Must be one of: "competition", "camp", "scholarship", "workshop", "hackathon", "open_house".
 4. "organizerTh": Organizer name in Thai.
 5. "organizerEn": Organizer name in English.
-6. "deadlineDate": Application deadline formatted strictly as YYYY-MM-DD.
-7. "deadlineTime": Time of deadline (e.g., "23:59").
+6. "deadlineDate": Application deadline strictly as YYYY-MM-DD, ONLY if stated in the source. Else null.
+7. "deadlineTime": "HH:mm" ONLY if a time is stated. Else null - never default to 23:59.
 8. "eventStartDate": Activity/event start date (YYYY-MM-DD).
 9. "eventEndDate": Activity/event end date (YYYY-MM-DD).
 10. "locationType": "onsite", "online", or "hybrid".

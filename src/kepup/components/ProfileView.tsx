@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Opportunity, AuthSession } from '../types';
 import { initialOf } from '../lib/auth';
-import { GRADE_LABELS, daysUntil } from '../lib/format';
+import { GRADE_LABELS, daysUntilDeadline } from '../lib/format';
 import { shelf } from '../lib/store';
 import { Glass } from './primitives';
 import { useUI } from './ui';
@@ -21,7 +21,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   const total = items.length;
   const applying = items.filter((o) => o.status === 'applying' || o.status === 'submitted').length;
-  const dueSoon = items.filter((o) => o.deadlineAt && daysUntil(o.deadlineAt) <= 7).length;
+  const dueSoon = items.filter((o) => {
+    if (!o.deadlineAt) return false;
+    const d = daysUntilDeadline(o);
+    return d >= 0 && d <= 7;
+  }).length;
 
   const handleReset = async () => {
     const ok = await ui.confirm({
